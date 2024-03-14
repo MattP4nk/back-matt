@@ -12,7 +12,7 @@ async function bootstrap() {
     .setDescription('Backend documentation')
     .setVersion('1.0')
     .addTag('Info')
-    .addTag('Aida')
+    .addTag('Muse')
     .addTag('Auth')
     .build();
   const document = SwaggerModule.createDocument(app, config);

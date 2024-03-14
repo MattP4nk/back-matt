@@ -2,7 +2,9 @@ import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
 import { MuseService } from './muse.service';
 import { Comms } from './dto/comms.dto';
 import { JwtService } from '@nestjs/jwt';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Muse')
 @Controller('muse')
 export class MuseController {
   constructor(private readonly museService: MuseService, private jwtService: JwtService,) {}

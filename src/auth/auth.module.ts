@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, userSchema } from './schema/user.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConst } from './jwt.const';
+import { Jwt, jwtSchema } from './schema/jwt.schema';
 
 @Module({
   imports: [
@@ -13,10 +14,14 @@ import { jwtConst } from './jwt.const';
         name: User.name,
         schema: userSchema,
       },
+      {
+        name: Jwt.name,
+        schema: jwtSchema
+      },
     ]),
     JwtModule.register({
       global: true,
-      secret: jwtConst.secret,
+      secret: jwtConst.secret, //Not the best, I know.
       signOptions: { expiresIn: '5h' },
     }),
   ],

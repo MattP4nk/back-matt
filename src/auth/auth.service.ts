@@ -7,6 +7,7 @@ import { compare, hash } from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Jwt, jwtDocument } from './schema/jwt.schema';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,7 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<userDocument>,
     private jwtAuthService: JwtService,
   ) {}
+  
 
   @UseGuards(JwtAuthGuard)
   async register(userDto: UserDto) {
@@ -22,6 +24,8 @@ export class AuthService {
     userDto = { ...userDto, password: plainToHash };
     return this.userModel.create(userDto);
   }
+
+  
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
