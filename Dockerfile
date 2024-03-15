@@ -1,6 +1,6 @@
-MAINTAINER Rodrigo Luna: matmadtales@gmail.com
-
 FROM node:21-alpine As development
+
+MAINTAINER Rodrigo Luna: matmadtales@gmail.com
 
 WORKDIR /app/src
 
