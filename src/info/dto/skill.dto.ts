@@ -11,4 +11,6 @@ export class SkillDto {
   detail: string;
   @ApiProperty()
   thoughts: string;
+  @ApiProperty()
+  growt: string;
 }

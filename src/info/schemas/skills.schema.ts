@@ -14,6 +14,8 @@ export class Skill {
   detail: string;
   @Prop()
   thoughts: string;
+  @Prop()
+  growt: string;
 }
 
 export const skillSchema = SchemaFactory.createForClass(Skill);

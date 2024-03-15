@@ -17,7 +17,7 @@ export class PetitionDto {
   @ApiProperty()
   target: string;
   @ApiProperty()
-  key: string;
+  key: string;  
   @ApiProperty()
   @ValidateNested()
   @Type(() => AboutMattDto)
