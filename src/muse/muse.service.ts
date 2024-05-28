@@ -7,6 +7,8 @@ import { Message, messageDocument } from './schema/message.schema';
 import { Model } from 'mongoose';
 import { AuthService } from 'src/auth/auth.service';
 
+let workTable;
+let workState = 0;
 @Injectable()
 export class MuseService {
   constructor(
@@ -17,30 +19,31 @@ export class MuseService {
   ) {}
 
   async login(credentials: string = '') {
-    let email = credentials.toLowerCase().split('-')[0];
-    let password = credentials.split('-')[1];
-    let state = 0;
-    let response;
-    if (email != undefined && password != undefined) {
-      let loginData = this.authService.login({
-        email: email,
-        password: password,
-      });
-      response =
-        'Login successful! Welcome ' +
-        (await loginData).user.email +
-        '.-' +
-        (await loginData).token;
-    } else {
-      if (email == '') {
-        response = 'Please type your email!';
-        state = 1;
-      } else {
-        response = 'Please type your password';
-        state = 2;
-      }
+    async function* logger(credentials?: string) {
+      let logginDetails = { email: String, password: String };
+      logginDetails.email = yield 'Please type your email!';
+      logginDetails.password = yield 'Please type your password';
+      return logginDetails;
     }
-    return { response: response, state: state };
+    switch (workState) {
+      case 0:
+        workTable = logger();
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = await workTable.next(credentials);
+        if (control.done == false) {
+          return await control;
+        } else {
+          let logginResult = await this.authService.login({
+            email: control.value.email,
+            password: control.value.password,
+          });
+          logginResult.user.password = '*********';
+          this.cleanState();
+          return { value: logginResult };
+        }
+    }
   }
 
   async tellAJoke() {
@@ -50,199 +53,298 @@ export class MuseService {
   }
 
   async askAbout(target: string = '') {
-    let area: string = target.split('-')[0];
-    let name: string = target.split('-')[1];
-    let anwser;
-    let names = [];
-    let state = 0;
-    switch (area) {
-      case 'Education':
+    const infoService = this.infoService;
+    async function* asking(question?: string) {
+      let area: string;
+      let name: string;
+      let itemList = '';
+      let subjectList;
+      do {
+        area =
+          yield 'Tell me about which area you want to know?\n=>Experience.\n=>Education.\n=>Skills.\n=>Projects.\n=>Matt.';
+        do {
+          switch (area.toLowerCase()) {
+            case 'experience':
+              subjectList = await infoService.findAllExp();
+              break;
+            case 'education':
+              subjectList = await infoService.findAllEdus();
+              break;
+            case 'skills':
+              subjectList = await infoService.findAllSkills();
+              break;
+            case 'projects':
+              subjectList = await infoService.findAllProjects();
+              break;
+            case 'matt':
+              return (await infoService.findMatt()).about_me;
+            default:
+              area =
+                yield 'Sorry, check the list above and enter a correct answer';
+              break;
+          }
+        } while (subjectList == undefined);
+        subjectList.forEach((subject: any) => {
+          itemList += '\n => ' + subject.name;
+        });
+        name = yield 'Here you have the ' +
+          area.toUpperCase() +
+          ' section:' +
+          itemList +
+          '\nPlease tell me about what *Item* do you wish to ask about?';
         try {
-          anwser = (await this.infoService.findOneEdu(name)).my_growth;
-          state = 0;
+          switch (area.toLowerCase()) {
+            case 'experience':
+              return (await infoService.findOneExp(name)).my_growth;
+            case 'education':
+              return (await infoService.findOneEdu(name)).my_growth;
+            case 'skills':
+              return (await infoService.findOneSkill(name)).thoughts;
+            case 'projects':
+              return (await infoService.findOneProject(name)).thoughts;
+            case 'change area':
+              subjectList = undefined;
+          }
         } catch {
-          let edus = await this.infoService.findAllEdus();
-          edus.forEach((edu) => {
-            names.push(edu.name);
-          });
-          anwser = 'Please especify about which item do you want to know more:';
-          names.forEach((name) => {
-            anwser += '\n+ ' + name;
-          });
-          state = 2;
+          name = yield "I can't find *" +
+            name +
+            "*. That item does not exist or I can't find it. Please check the spelling and try again!";
         }
-        break;
-
-      case 'Experience':
-        try {
-          anwser = (await this.infoService.findOneExp(name)).my_growth;
-          state = 0;
-        } catch {
-          let jobs = await this.infoService.findAllExp();
-          jobs.forEach((job) => {
-            names.push(job.name);
-          });
-          anwser = 'Please especify about which item do you want to know more:';
-          names.forEach((name) => {
-            anwser += '\n+ ' + name;
-          });
-          state = 2;
-        }
-        break;
-
-      case 'Skills':
-        try {
-          anwser = (await this.infoService.findOneSkill(name)).thoughts;
-          state = 0;
-        } catch {
-          let skills = await this.infoService.findAllSkills();
-          skills.forEach((skill) => {
-            names.push(skill.name);
-          });
-          anwser = 'Please especify about which item do you want to know more:';
-          names.forEach((name) => {
-            anwser += '\n+ ' + name;
-          });
-          state = 2;
-        }
-        break;
-
-      case 'Projects':
-        try {
-          anwser = (await this.infoService.findOneProject(name)).thoughts;
-          state = 0;
-        } catch {
-          let projects = await this.infoService.findAllProjects();
-          projects.forEach((prj) => {
-            names.push(prj.name);
-          });
-          anwser = 'Please especify about which item do you want to know more:';
-          names.forEach((name) => {
-            anwser += '\n+ ' + name;
-          });
-          state = 2;
-        }
-        break;
-
-      case 'Matt':
-        anwser = (await this.infoService.findMatt()).about_me;
-        state = 0;
-        break;
-
-      default:
-        anwser =
-          'About which area you wanna know more?\n+ Matt\n+ Education\n+ Experience\n+ Skills\n+ Projects';
-        state = 1;
-        break;
+      } while (workState != 2);
+      yield;
     }
-    return { anwser, state };
-  }
-
-  saveMessage(message: MessageDto) {
-    if (message.sender != undefined && message.message != undefined) {
-      this.messageModel.create(message);
-      return true;
-    } else {
-      return false;
+    switch (workState) {
+      case 0:
+        workTable = asking();
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = await workTable.next(target);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          return control;
+        }
     }
   }
 
   postMessage(details: string) {
-    let sender;
-    let message;
-    if (details != undefined) {
-      sender = details.split('-')[0];
-      message = details.split('-')[1];
-    }
-    let state = 0;
-    let response;
-    if (
-      this.saveMessage({
-        sender: sender,
-        message: message,
+    function* writer(details?: string) {
+      let messageDetails: MessageDto = {
+        sender: '',
+        message: '',
         date: Date(),
-        read: false,
-      }) == false
-    ) {
-      if (sender == undefined) {
-        response = 'Please type your name!';
-        state = 1;
-      } else {
-        response =
-          'Now type the message you wanna send, if you can add a way to contact you so I can reply';
-        state = 2;
-      }
-    } else {
-      response = 'Message posted!';
+      };
+      messageDetails.sender = yield 'Please tell me your name!';
+      messageDetails.message =
+        yield 'Now type the message you wanna send. If you can, please, add a way for me to contact you so I can reply';
+      return messageDetails;
     }
-    return { response: response, state: state };
-  }
 
-  async readMessages(sender: string = '') {
-    let response;
-    let state = 0;
-    try {
-      let message = await this.messageModel.findOne({ sender: sender });
-      response =
-        'Sender: ' +
-        message.sender +
-        '\nMessage: ' +
-        message.message +
-        '\nDate: ' +
-        message.date +
-        '\nRead: ' +
-        message.read;
-      message.read = true;
-      console.log(
-        await this.messageModel.findByIdAndUpdate(message._id, message, {
-          new: true,
-        }),
-      );
-    } catch {
-      let list = await this.messageModel.find();
-      if (list.length == 0) {
-        response = 'There are no messages';
-      } else {
-        response = "Please tell me who's message you wanna read:";
-        list.forEach((message) => {
-          response += '\n>>' + message.sender;
-        });
-        state = 1;
-      }
-    }
-    return { response: response, state: state };
-  }
-
-  async clearReadMessages(sender?: string) {
-    let response;
-    let state = 0;
-    console.log(sender);
-    if (sender == 'all') {
-      await this.messageModel.deleteMany({ read: true });
-      response = 'All read messages where deleted';
-    } else {
-      if (sender !== undefined) {
-        try {
-          await this.messageModel.findOneAndDelete({ sender: sender });
-          response = 'The message from ' + sender + ' was deleted.';
-        } catch {
-          response =
-            'Message not found. Please check for grammar and try again.';
-        }
-      } else {
-        state = 1;
-        let readMessages = await this.messageModel.find({ read: true });
-        if (readMessages.length == 0) {
-          response = 'There are no read messages to delete.';
+    switch (workState) {
+      case 0:
+        workTable = writer();
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = workTable.next(details);
+        if (control.done == false) {
+          return control;
         } else {
-          response =
-            "Please tell me who's read message you wanna delete if not all.";
-          readMessages.forEach((message) => {
-            response += '\n>> ' + message.sender + '.';
-          });
+          this.messageModel.create(control.value);
+          this.cleanState();
+          return { value: 'Message posted' };
         }
+    }
+  }
+
+  async readMessages(sender?: string) {
+    const messageModel = this.messageModel;
+    async function* reader(sender?: string) {
+      let response;
+      let messages = await messageModel.find();
+      let messagesList = '';
+      if (messages.length == 0) {
+        return 'There are no messages';
+      } else {
+        messages.forEach((message) => {
+          messagesList +=
+            '\n => Sender: ' + message.sender + '. Read?: ' + message.read;
+        });
+        let messageToRead =
+          yield "Please tell me who's message you wanna read:" + messagesList;
+        do {
+          try {
+            let message = await messageModel.findOne({ sender: messageToRead });
+            response =
+              'Sender: ' +
+              message.sender +
+              '\nMessage: ' +
+              message.message +
+              '\nDate: ' +
+              message.date +
+              '\nRead: ' +
+              message.read;
+            message.read = true;
+            await messageModel.findOneAndUpdate(
+              { sender: messageToRead },
+              message,
+            );
+            return response;
+          } catch {
+            messageToRead =
+              yield 'Sorry, check the spelling above and type your answer';
+          }
+        } while (response == undefined);
       }
     }
-    return { response: response, state: state };
+    switch (workState) {
+      case 0:
+        workTable = reader();
+        workState = 1;
+        return await workTable.next();
+      case 1:
+        let control = await workTable.next(sender);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          return control;
+        }
+    }
+  }
+
+  cleanState() {
+    workState = 0;
+    workTable = null;
+  }
+
+  async post(data: string) {
+    function* contentBuilder(model: {}, reply?: string) {
+      let area = reply.toLowerCase();
+      let response = model;
+      let keys: Array<string> = [];
+      Object.entries(model).forEach((key) => {
+        keys.push(key[0]);
+      });
+      for (let i = 0; i < keys.length; ) {
+        if (response[keys[i]] != '') {
+          if (reply == 'yes') {
+            i++;
+          } else if (reply == 'no') {
+            response[keys[i]] = '';
+          } else {
+            reply = yield 'please just reply with yes or no.';
+          }
+        } else {
+          reply = yield 'please tell me the ' + keys[i] + ' of the ' + area;
+          response[keys[i]] = reply;
+          reply = yield 'is * ' +
+            keys[i].toUpperCase() +
+            ': ' +
+            response[keys[i]] +
+            ' * correct?';
+        }
+      }
+      return { area, response };
+    }
+    let model;
+    switch (workState) {
+      case 0:
+        switch (data.toLowerCase()) {
+          case 'experience':
+            model = { name: '', type: '', details: '', my_growth: '' };
+            break;
+          case 'education':
+            model = { name: '', type: '', details: '', my_growth: '' };
+            break;
+          case 'skill':
+            model = {
+              name: '',
+              type: '',
+              knowledge: '',
+              detail: '',
+              thoughts: '',
+              growt: '',
+            };
+            break;
+          case 'project':
+            model = { name: '', URL: '', details: '', thoughts: '' };
+            break;
+          default:
+            return {
+              value:
+                'Please tell me what area are we working on: \n+Experience\n+Education\n+Skill\n+Projects',
+            };
+        }
+        workTable = contentBuilder(model, data);
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = workTable.next(data);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          switch (control.value.area) {
+            case 'experience':
+              return this.infoService.createExp(control.value.response);
+            case 'education':
+              return this.infoService.createEdu(control.value.response);
+            case 'skill':
+              return this.infoService.createSkill(control.value.response);
+            case 'project':
+              return this.infoService.createProject(control.value.response);
+          }
+        }
+    }
+  }
+
+  async clearReadMessages(target?: string) {
+    const messageModel = this.messageModel;
+    async function* cleaner(target?: string) {
+      let messages = await messageModel.find();
+      let messagesList = '';
+      if (messages.length == 0) {
+        return 'There are no messages to clear';
+      }
+      messages.forEach((message) => {
+        messagesList +=
+          '\n => Sender: ' + message.sender + '. Read?: ' + message.read;
+      });
+      target =
+        yield 'Please tell me which message to delete or type *all* to delete all read messages.' +
+          messagesList;
+
+      do {
+        if (target.toLowerCase() == 'all') {
+          await messageModel.deleteMany({ read: true });
+          return 'All read messages where deleted';
+        } else {
+          try {
+            await this.messageModel.findOneAndDelete({ sender: target });
+            return 'The message from ' + target + ' was deleted.';
+          } catch {
+            target =
+              yield 'Message not found. Please check the spelling and try again.';
+          }
+        }
+      } while (true);
+    }
+    switch (workState) {
+      case 0:
+        workTable = cleaner();
+        workState = 1;
+        return await workTable.next();
+      case 1:
+        let control = await workTable.next(target);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          return control;
+        }
+    }
   }
 }

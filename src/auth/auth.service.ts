@@ -28,6 +28,7 @@ export class AuthService {
   
 
   async login(loginDto: LoginDto) {
+    console.log("login control")
     const { email, password } = loginDto;
     const findUser = await this.userModel.findOne({ email: email });
     if (!findUser) throw new HttpException('USER_NOT_FOUND', 404);
@@ -39,6 +40,7 @@ export class AuthService {
       user: findUser,
       token,
     };
+    console.log("login data control: " + data)
     return data;
   }
 

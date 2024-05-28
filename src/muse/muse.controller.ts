@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpStatus, Get } from '@nestjs/common';
 import { MuseService } from './muse.service';
 import { Comms } from './dto/comms.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -8,6 +8,11 @@ import { ApiTags } from '@nestjs/swagger';
 @Controller('muse')
 export class MuseController {
   constructor(private readonly museService: MuseService, private jwtService: JwtService,) {}
+
+  @Post("/test")
+  test(@Body() body){
+    return this.museService.post(body.data)
+  }
 
   @Post()
   async museComms(@Res() res, @Body() newComm: Comms) {
@@ -20,10 +25,8 @@ export class MuseController {
 
       case 'login':
         comms = (await this.museService.login(newComm.message));
-        response = comms.response;
-        if ( comms.state == 1) { currentTask = newComm.command;}
-        else if ( comms.state == 2) { currentTask = newComm.command + "-" + newComm.message;}
-        else { currentTask = ""; }
+        if (comms.done == false){currentTask = newComm.command}
+        response = comms.value;
         break;
 
       case 'help':
@@ -35,12 +38,13 @@ export class MuseController {
                   \n+ message: Posts a message.
                   \n+ login: Login into the sistem.
                   \n+ clear: Clears console.
-                  \n+ cancel: Cancels currect task.
+                  \n+ cancel: Cancels current task.
                   \n+ read: Shows all posted messages -needs key-.
-                  \n+ clearMessages: Clear all read messages -needs key-.
+                  \n+ clearMessages: Clear read messages -needs key-.
+                  \n+ post: Posts new info -needs key-.
+                  \n+ update: Updates info -needs key-.
                   \n+ future: Return a list of future implementations.
                   `;
-                  //
                   //      
       break;
 
@@ -48,9 +52,19 @@ export class MuseController {
         try{
           this.jwtService.verify(newComm.key)
           comms = await this.museService.clearReadMessages(newComm.message);
-          response = comms.response;
-          if (comms.state == 1) { currentTask = newComm.command }
-          else { currentTask = ""; }
+          response = comms.value;
+          if (comms.done == false) { currentTask = newComm.command }
+        }catch{
+          response = "You don't have authorization to access this resource"
+        }
+      break;
+
+      case "post":
+        try{
+          this.jwtService.verify(newComm.key)
+          comms = await this.museService.post(newComm.message);
+          response = comms.value;
+          if (comms.done == false){currentTask = newComm.command}
         }catch{
           response = "You don't have authorization to access this resource"
         }
@@ -59,30 +73,27 @@ export class MuseController {
       case 'read':
         try {
           this.jwtService.verify(newComm.key)
+          console.log("passed key")
           comms = (await this.museService.readMessages(newComm.message));
-          response = comms.response;
-          if (comms.state == 1) { currentTask = newComm.command }
-          else { currentTask = ""; }
+          console.log(comms)
+          response = comms.value;
+          if (comms.done == false) { currentTask = newComm.command }
         }
-        catch {
+        catch{
           response = "You don't have authorization to access this resource"
         }
         break;
 
       case 'ask':
         comms = (await this.museService.askAbout(newComm.message));
-        response = comms.anwser;
-        if (comms.state == 1) { currentTask = newComm.command }
-        else if (comms.state == 2) { currentTask = newComm.command + "-" + newComm.message}
-        else { currentTask = ""; }
+        response = comms.value;
+        if (comms.done == false){currentTask = newComm.command}
         break;
 
       case 'message':
         message = (await this.museService.postMessage(newComm.message));
-        response = message.response;
-        if ( message.state == 1) { currentTask = newComm.command;}
-        else if ( message.state == 2) { currentTask = newComm.command + "-" + newComm.message;}
-        else { currentTask = ""; }
+        if (comms.done == false){currentTask = newComm.command}
+        response = message.value;
         break;
 
       case 'joke':
@@ -98,14 +109,14 @@ export class MuseController {
         response = "Bad Request! Please only use an available command! You can type help for more information!"
     }
     if (response == null){badREQ = true}
-        if (badREQ){
-            res
-            .status(HttpStatus.BAD_REQUEST)
-            .json({ message: 'Sorry, can\'t do!', newComm });
-        }else{
-            res
-            .status(HttpStatus.OK)
-            .json({ message: 'Sure!', response: response, currentTask: currentTask });
-        }
+    if (badREQ){
+        res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ message: 'Sorry, can\'t do!', newComm });
+    }else{
+        res
+        .status(HttpStatus.OK)
+        .json({ message: 'Sure!', response: response, currentTask: currentTask });
+    }
   }
 }
