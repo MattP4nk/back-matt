@@ -43,6 +43,7 @@ export class MuseController {
                   \n+ clearMessages: Clear read messages -needs key-.
                   \n+ post: Posts new info -needs key-.
                   \n+ update: Updates info -needs key-.
+                  \n+ delete: Deletes info -needs key-.
                   \n+ future: Return a list of future implementations.
                   `;
                   //      
@@ -63,6 +64,28 @@ export class MuseController {
         try{
           this.jwtService.verify(newComm.key)
           comms = await this.museService.post(newComm.message);
+          response = comms.value;
+          if (comms.done == false){currentTask = newComm.command}
+        }catch{
+          response = "You don't have authorization to access this resource"
+        }
+      break;
+
+      case "update":
+        try{
+          //this.jwtService.verify(newComm.key)
+          comms = await this.museService.update(newComm.message);
+          response = comms.value;
+          if (comms.done == false){currentTask = newComm.command}
+        }catch{
+          response = "You don't have authorization to access this resource"
+        }
+      break;
+
+      case "delete":
+        try{
+          //this.jwtService.verify(newComm.key)
+          comms = await this.museService.delete(newComm.message);
           response = comms.value;
           if (comms.done == false){currentTask = newComm.command}
         }catch{
@@ -102,7 +125,7 @@ export class MuseController {
           return;
       
       case 'future':
-          response = 'I\'m working in adding updating and posting new info directly from Muse.'
+          response = 'I\'m working in AI implementation for muse.'
       break
 
       default:

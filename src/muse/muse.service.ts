@@ -301,6 +301,266 @@ export class MuseService {
     }
   }
 
+  async update(data: string) {
+    const infoService = this.infoService;
+    async function* contentUpdater() {
+      let area: string;
+      let name: string;
+      let nameList = '';
+      let itemList;
+      let item;
+      let done = false;
+      do {
+        area =
+          yield 'Tell me in which area you want to work?\n=>Experience.\n=>Education.\n=>Skills.\n=>Projects.\n=>Matt.';
+        do {
+          switch (area.toLowerCase()) {
+            case 'experience':
+              itemList = await infoService.findAllExp();
+              break;
+            case 'education':
+              itemList = await infoService.findAllEdus();
+              break;
+            case 'skills':
+              itemList = await infoService.findAllSkills();
+              break;
+            case 'projects':
+              itemList = await infoService.findAllProjects();
+              break;
+            case 'matt':
+              item = await infoService.findMatt();
+              break;
+            default:
+              area =
+                yield 'Sorry, check the list above and enter a correct answer';
+              break;
+          }
+        } while (itemList == undefined && item == undefined);
+        if (area.toLowerCase() != 'matt') {
+          itemList.forEach((item: any) => {
+            nameList += '\n => ' + item.name;
+          });
+          name = yield 'Here you have the ' +
+            area.toUpperCase() +
+            ' section:' +
+            nameList +
+            '\nPlease tell me what *Item* do you wish to update?';
+          do {
+            itemList.forEach((it) => {
+              if (it.name == name) {
+                item = it;
+              }
+            });
+            if (item == undefined) {
+              name = yield "I can't find *" +
+                name +
+                "*. That item does not exist or I can't find it. Please check the spelling and try again!";
+            }
+          } while (item == undefined);
+        }
+        do {
+          let fieldList = 'AREA:  ' + area.toUpperCase();
+          Object.entries(item._doc).forEach((field) => {
+            if (field[0] != '_id' && field[0] != '__v') {
+              fieldList += '\n ==>' + field[0].toUpperCase() + ':  ' + field[1];
+            }
+          });
+          let field = yield 'Here:' +
+            fieldList +
+            '\n Tell me the field to update.';
+          item[field] = yield 'Give me the updated version of ' + field + '.';
+          let yesNo = true;
+          let confirmation = yield 'The updated *' +
+            field.toUpperCase() +
+            '* is *' +
+            item[field] +
+            '* do you want to continue updating this item?';
+          do {
+            switch (confirmation.toLowerCase()) {
+              case 'yes':
+                yesNo = false;
+                break;
+              case 'no':
+                switch (area) {
+                  case 'experience':
+                    await infoService.updateExp(item);
+                    break;
+                  case 'education':
+                    await infoService.updateEdu(item);
+                    break;
+                  case 'skills':
+                    await infoService.updateSkill(item);
+                    break;
+                  case 'projects':
+                    await infoService.updateProject(item);
+                    break;
+                  case 'matt':
+                    await infoService.updateMatt(item);
+                    break;
+                }
+                yesNo = false;
+                done = true;
+                break;
+              default:
+                confirmation = yield 'Please just "yes" or "no" answers!';
+                break;
+            }
+          } while (yesNo);
+        } while (!done);
+        let yesNo = true;
+        let confirmation = yield 'Do you wish to keep updating this porfolio?';
+        do {
+          switch (confirmation) {
+            case 'yes':
+              yesNo = false;
+              break;
+            case 'no':
+              yesNo = false;
+              workState = 2;
+              break;
+            default:
+              confirmation = yield 'Please just "yes" or "no" answers!';
+              break;
+          }
+        } while (yesNo);
+      } while (workState != 2);
+      return 'Updating is done!';
+    }
+    switch (workState) {
+      case 0:
+        workTable = contentUpdater();
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = await workTable.next(data);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          return control;
+        }
+    }
+  }
+
+  async delete(data: string) {
+    const infoService = this.infoService;
+    async function* contentEraser() {
+      let area: string;
+      let name: string;
+      let nameList = '';
+      let itemList;
+      let item;
+      do {
+        area =
+          yield 'Tell me in which area you want to work?\n=>Experience.\n=>Education.\n=>Skills.\n=>Projects.';
+        do {
+          switch (area.toLowerCase()) {
+            case 'experience':
+              itemList = await infoService.findAllExp();
+              break;
+            case 'education':
+              itemList = await infoService.findAllEdus();
+              break;
+            case 'skills':
+              itemList = await infoService.findAllSkills();
+              break;
+            case 'projects':
+              itemList = await infoService.findAllProjects();
+              break;
+            default:
+              area =
+                yield 'Sorry, check the list above and enter a correct answer';
+              break;
+          }
+        } while (itemList == undefined && item == undefined);
+        itemList.forEach((item: any) => {
+          nameList += '\n => ' + item.name;
+        });
+        name = yield 'This is the *' +
+          area.toUpperCase() +
+          '* section:' +
+          nameList +
+          '\nPlease tell me what *Item* do you wish to delete?';
+        do {
+          itemList.forEach((it) => {
+            if (it.name == name) {
+              item = it;
+            }
+          });
+          if (item == undefined) {
+            name = yield "I can't find *" +
+              name +
+              "*. That item does not exist or I can't find it. Please check the spelling and try again!";
+          }
+        } while (item == undefined);
+        let yesNo = true;
+        let confirmation = yield 'We will delete *' +
+          item.name +
+          '*. Do you want to delete this item?';
+        do {
+          switch (confirmation.toLowerCase()) {
+            case 'no':
+              yesNo = false;
+              break;
+            case 'yes':
+              switch (area) {
+                case 'experience':
+                  await infoService.removeExp(item.name);
+                  break;
+                case 'education':
+                  await infoService.removeEdu(item.name);
+                  break;
+                case 'skills':
+                  await infoService.removeSkill(item.name);
+                  break;
+                case 'projects':
+                  await infoService.removeProject(item.name);
+                  break;
+              }
+              yesNo = false;
+              break;
+            default:
+              confirmation = yield 'Please just "yes" or "no" answers!';
+              break;
+          }
+        } while (yesNo);
+        yesNo = true;
+        confirmation = yield 'Do you wish to delete another item?';
+        do {
+          switch (confirmation.toLowerCase()) {
+            case 'yes':
+              nameList = "";
+              yesNo = false;
+              break;
+            case 'no':
+              yesNo = false;
+              workState = 2;
+              break;
+            default:
+              confirmation = yield 'Please just "yes" or "no" answers!';
+              break;
+          }
+        } while (yesNo);
+      } while (workState != 2);
+      return 'We are done!';
+    }
+
+    switch (workState) {
+      case 0:
+        workTable = contentEraser();
+        workState = 1;
+        return workTable.next();
+      case 1:
+        let control = await workTable.next(data);
+        if (control.done == false) {
+          return control;
+        } else {
+          this.cleanState();
+          return control;
+        }
+    }
+  }
+
   async clearReadMessages(target?: string) {
     const messageModel = this.messageModel;
     async function* cleaner(target?: string) {
