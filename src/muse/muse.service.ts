@@ -47,7 +47,7 @@ export class MuseService {
           }
           
           this.cleanState();
-          return { message: message, token: logginResult.token };
+          return {value: logginResult };
         }
     }
   }
