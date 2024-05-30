@@ -26,7 +26,7 @@ export class MuseController {
       case 'login':
         comms = (await this.museService.login(newComm.message));
         if (comms.done == false){currentTask = newComm.command}
-        response = comms.value;
+        response = comms;
         break;
 
       case 'help':
