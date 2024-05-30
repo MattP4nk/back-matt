@@ -418,6 +418,7 @@ export class MuseService {
         do {
           switch (confirmation) {
             case 'yes':
+              nameList = "";
               yesNo = false;
               break;
             case 'no':
