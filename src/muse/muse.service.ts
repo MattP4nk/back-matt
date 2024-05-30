@@ -35,13 +35,19 @@ export class MuseService {
         if (control.done == false) {
           return await control;
         } else {
+          let message: string;
           let logginResult = await this.authService.login({
             email: control.value.email,
             password: control.value.password,
           });
-          logginResult.user.password = '*********';
+          if (logginResult.token != undefined){
+            message = "Login Success"
+          }else{
+            message = "Login Failed"
+          }
+          
           this.cleanState();
-          return { value: logginResult };
+          return { message: message, token: logginResult.token };
         }
     }
   }
