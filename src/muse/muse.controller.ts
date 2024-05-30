@@ -23,6 +23,11 @@ export class MuseController {
     let message;
     switch (newComm.command) {
 
+      case 'cancel':
+        await this.museService.cleanState()
+        response = "All Clean"
+        break;
+
       case 'login':
         comms = (await this.museService.login(newComm.message));
         if (comms.done == false){currentTask = newComm.command}
