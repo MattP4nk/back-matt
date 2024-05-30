@@ -381,6 +381,7 @@ export class MuseService {
             '* is *' +
             item[field] +
             '* do you want to continue updating this item?';
+            console.log(item)
           do {
             switch (confirmation.toLowerCase()) {
               case 'yes':
