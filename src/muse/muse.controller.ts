@@ -78,7 +78,7 @@ export class MuseController {
 
       case "update":
         try{
-          //this.jwtService.verify(newComm.key)
+          this.jwtService.verify(newComm.key)
           comms = await this.museService.update(newComm.message);
           response = comms.value;
           if (comms.done == false){currentTask = newComm.command}
