@@ -588,7 +588,7 @@ export class MuseService {
       do {
         if (target.toLowerCase() == 'all') {
           await messageModel.deleteMany({ read: true });
-          return 'All read messages where deleted';
+          return 'All read messages were deleted';
         } else {
           try {
             await this.messageModel.findOneAndDelete({ sender: target });
