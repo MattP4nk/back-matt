@@ -120,8 +120,7 @@ export class MuseController {
 
       case 'message':
         message = (await this.museService.postMessage(newComm.message));
-        if (comms.done == false){currentTask = newComm.command}
-        console.log(message.value)
+        if (message.done == false){currentTask = newComm.command}
         response = message.value;
         break;
 
